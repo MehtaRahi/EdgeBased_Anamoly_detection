@@ -7,18 +7,14 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 from src.data.data_loader import load_data
 from src.evaluation.threshold import compute_threshold
 
-# -----------------------------------------------------------
-# PATH SETUP
-# -----------------------------------------------------------
+
 BASE_DIR = Path(__file__).resolve().parents[2]
 RESULTS_DIR = BASE_DIR / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
 MODEL_PATH = RESULTS_DIR / "global_model.h5"
 
-# -----------------------------------------------------------
-# CONFIG
-# -----------------------------------------------------------
+
 SEQ_LEN = 64
 NUM_FEATURES = 38
 
@@ -30,9 +26,7 @@ MACHINES = [
     "machine-3-6"
 ]
 
-# -----------------------------------------------------------
-# LOAD GLOBAL MODEL
-# -----------------------------------------------------------
+
 def load_global_model():
     print(f"[INFO] Loading global FL model → {MODEL_PATH}")
 
@@ -41,9 +35,7 @@ def load_global_model():
 
     return model
 
-# -----------------------------------------------------------
-# EVALUATE GLOBAL MODEL
-# -----------------------------------------------------------
+
 def evaluate_global_model():
     model = load_global_model()
 
@@ -67,13 +59,11 @@ def evaluate_global_model():
     all_mse = np.array(all_mse)
     all_labels = np.array(all_labels)
 
-    # Threshold (IQR)
     threshold = compute_threshold(all_mse)
     print(f"\n[INFO] Computed anomaly threshold (IQR): {threshold:.6f}")
 
     y_pred = (all_mse > threshold).astype(int)
 
-    # Metrics
     precision = precision_score(all_labels, y_pred, zero_division=0)
     recall = recall_score(all_labels, y_pred, zero_division=0)
     f1 = f1_score(all_labels, y_pred, zero_division=0)
@@ -86,8 +76,6 @@ def evaluate_global_model():
 
     return precision, recall, f1
 
-# -----------------------------------------------------------
-# ENTRY POINT
-# -----------------------------------------------------------
+
 if __name__ == "__main__":
     evaluate_global_model()

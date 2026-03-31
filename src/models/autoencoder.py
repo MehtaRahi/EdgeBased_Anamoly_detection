@@ -3,21 +3,14 @@ from tensorflow.keras import layers, models
 from tensorflow.keras.layers import Input, LSTM, RepeatVector, TimeDistributed, Dense
 
 
-# -------------------------------------------------------
-# 1. CANONICAL AUTOENCODER (Federated Learning Model)
-# -------------------------------------------------------
-
 def autoencoder(seq_len=64, n_features=38):
     inputs = Input(shape=(seq_len, n_features))
 
-    # Encoder
     x = LSTM(64, return_sequences=True)(inputs)
     x = LSTM(32, return_sequences=False)(x)
 
-    # Bottleneck
     bottleneck = RepeatVector(seq_len)(x)
 
-    # Decoder
     x = LSTM(32, return_sequences=True)(bottleneck)
     outputs = TimeDistributed(Dense(n_features))(x)
 
@@ -28,14 +21,9 @@ def autoencoder(seq_len=64, n_features=38):
 
 
 
-# -------------------------------------------------------
-# 2. IMPROVED CNN–LSTM AUTOENCODER (Local Model Only)
-# -------------------------------------------------------
-
 def improved_cnn_lstm(seq_len=64, num_features=38, latent_dim=128):
     inputs = layers.Input(shape=(seq_len, num_features))
 
-    # CNN Feature Extractor
     x = layers.Conv1D(64, kernel_size=3, padding="same", activation="relu")(inputs)
     x = layers.LayerNormalization()(x)
 
@@ -44,13 +32,10 @@ def improved_cnn_lstm(seq_len=64, num_features=38, latent_dim=128):
 
     x = layers.Dropout(0.2)(x)
 
-    # Bidirectional LSTM Encoder
     x = layers.Bidirectional(layers.LSTM(128, return_sequences=False))(x)
 
-    # Bottleneck
     encoded = layers.Dense(latent_dim, activation="relu")(x)
 
-    # Decoder
     repeat = layers.RepeatVector(seq_len)(encoded)
 
     x = layers.LSTM(128, return_sequences=True)(repeat)

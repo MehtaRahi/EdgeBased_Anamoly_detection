@@ -4,6 +4,6 @@ __pycache__/
 *.npz
 data/
 results/
-local_results/
-ppt/old/
 .env
+*.keras
+*.tflite
