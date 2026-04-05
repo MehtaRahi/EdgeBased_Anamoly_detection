@@ -1,19 +1,23 @@
 import sys
 from pathlib import Path
 
+# Fix import path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
+import json
 
-from src.models.autoencoder import improved_cnn_lstm_prob
+from src.models.autoencoder import improved_cnn_lstm
 from src.data.data_loader import load_data
+from src.data.skab_loader import load_skab
 from src.evaluation.evaluator import evaluate
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-SEQ_LEN = 64
-NUM_FEATURES = 38
+DATASET = "skab"   # "smd" or "skab"
+
+SEQ_LEN = 50
 
 MACHINES = [
     "machine-1-1",
@@ -24,20 +28,23 @@ MACHINES = [
 ]
 
 
-def main():
-
-    print("[INFO] Starting evaluation...\n")
-
+# -----------------------
+# SMD evaluation
+# -----------------------
+def run_smd():
     summary = []
 
     for machine_id in MACHINES:
         print(f"Evaluating {machine_id}")
 
-        # 🔥 reload model per machine (important)
-        model = improved_cnn_lstm_prob(seq_len=SEQ_LEN, num_features=NUM_FEATURES)
-        model.load_weights(PROJECT_ROOT / "models/global_model.keras")
+        X_train, X_test, y_test = load_data(machine_id, dataset="smd")
 
-        X_train, X_test, y_test = load_data(machine_id)
+        num_features = X_train.shape[2]
+
+        model = improved_cnn_lstm(seq_len=SEQ_LEN, num_features=num_features)
+
+        # 🔥 Fix model path
+        model.load_weights(PROJECT_ROOT / "models/federated_smd_model.keras")
 
         precision, recall, f1, threshold = evaluate(
             model, X_train, X_test, y_test
@@ -54,9 +61,62 @@ def main():
             "threshold": threshold
         })
 
-    df = pd.DataFrame(summary)
+    return pd.DataFrame(summary)
 
-    print("\n=== FEDERATED MODEL SUMMARY ===")
+
+# -----------------------
+# SKAB evaluation (FIXED)
+# -----------------------
+def run_skab():
+
+    print("Evaluating SKAB dataset")
+
+    # 🔥 Correct loader usage
+    X_train, X_test, y_test = load_skab()
+
+    num_features = X_train.shape[2]
+
+    model = improved_cnn_lstm(seq_len=SEQ_LEN, num_features=num_features)
+
+    # 🔥 Load correct federated model
+    model.load_weights(PROJECT_ROOT / "models/federated_skab_model.keras")
+
+    # 🔥 No manual split anymore
+    precision, recall, f1, threshold = evaluate(
+        model, X_train, X_test, y_test
+    )
+
+    print("Using: AE + RandomForest\n")
+    print("Mode: Classifier-based detection\n")
+
+    summary = [{
+        "dataset": "skab",
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "mode": "classifier"
+    }]
+
+    return pd.DataFrame(summary)
+
+
+# -----------------------
+# MAIN
+# -----------------------
+def main():
+
+    print(f"[INFO] Starting evaluation on {DATASET.upper()}...\n")
+
+    if DATASET == "smd":
+        df = run_smd()
+
+    elif DATASET == "skab":
+        df = run_skab()
+
+    else:
+        raise ValueError("Unsupported dataset")
+
+    print("\n=== MODEL SUMMARY ===")
     print("Avg Precision:", df["precision"].mean())
     print("Avg Recall   :", df["recall"].mean())
     print("Avg F1       :", df["f1_score"].mean())
@@ -65,18 +125,15 @@ def main():
     results_dir = PROJECT_ROOT / "results"
     results_dir.mkdir(exist_ok=True)
 
-    dataset_name = "smd"
-    df.to_csv(results_dir / f"{dataset_name}_federated_summary.csv", index=False)
+    df.to_csv(results_dir / f"{DATASET}_summary.csv", index=False)
 
-
-    import json
     metrics = {
         "avg_precision": float(df["precision"].mean()),
         "avg_recall": float(df["recall"].mean()),
         "avg_f1": float(df["f1_score"].mean())
     }
 
-    with open(results_dir / f"{dataset_name}_federated_metrics.json", "w") as f:
+    with open(results_dir / f"{DATASET}_metrics.json", "w") as f:
         json.dump(metrics, f, indent=4)
 
     print("\n[SAVED] Results + metrics")

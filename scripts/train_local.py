@@ -3,7 +3,6 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-import pandas as pd
 import numpy as np
 
 from src.models.autoencoder import improved_cnn_lstm_prob
@@ -12,8 +11,9 @@ from src.data.data_loader import load_data
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+DATASET = "smd"   
+
 SEQ_LEN = 64
-NUM_FEATURES = 38
 
 MACHINES = [
     "machine-1-1",
@@ -24,18 +24,17 @@ MACHINES = [
 ]
 
 
-def main():
-
-    print("[INFO] Starting Local Training...\n")
-
-    summary = []
+def train_smd():
+    print("[INFO] Training on SMD...\n")
 
     for machine_id in MACHINES:
         print(f"Training on {machine_id}")
 
-        X_train, X_test, y_test = load_data(machine_id)
+        X_train, _, _ = load_data(machine_id, dataset="smd")
 
-        model = improved_cnn_lstm_prob(seq_len=SEQ_LEN, num_features=NUM_FEATURES)
+        num_features = X_train.shape[2]
+
+        model = improved_cnn_lstm_prob(seq_len=SEQ_LEN, num_features=num_features)
 
         noise_factor = 0.08
         X_train_noisy = X_train + noise_factor * np.random.normal(size=X_train.shape)
@@ -46,10 +45,27 @@ def main():
             X_train,
             epochs=5,
             batch_size=64,
-            verbose=0
+            verbose=1
         )
 
-        print(f"{machine_id} → Training complete")
+        print(f"{machine_id} → Training complete\n")
+
+    # Save last trained model
+    model_path = PROJECT_ROOT / "models/local_smd_model.keras"
+    model.save(model_path)
+
+    print(f"[SAVED] {model_path}")
+
+
+def main():
+
+    print(f"[INFO] Starting Local Training on {DATASET.upper()}...\n")
+
+    if DATASET == "smd":
+        train_smd()
+
+    else:
+        raise ValueError("Unsupported dataset")
 
     print("\n[INFO] Local training complete")
 
