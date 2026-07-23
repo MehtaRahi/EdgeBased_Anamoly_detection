@@ -9,10 +9,10 @@ __pycache__/
 .vscode/
 .idea/
 
-models/
-results/
-data/
-extra/
+/models/
+/results/
+/data/
+/extra/
 
 *.keras
 *.h5
