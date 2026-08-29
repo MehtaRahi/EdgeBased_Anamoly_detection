@@ -59,7 +59,6 @@ The framework is benchmarked on three diverse, real-world datasets:
 
 ```text
 ├── data/                  # Dataset directories (SKAB, SMD, NAB)
-├── docs/                  # Reference papers and analysis
 ├── models/                # Saved global federated model weights
 ├── ppt/                   # Presentation materials
 ├── results/               # CSV outputs and generated publication plots
